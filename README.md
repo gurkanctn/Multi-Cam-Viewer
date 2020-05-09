@@ -1,6 +1,6 @@
 # Cpp-Projects
 
-# Video Processing with Threads
+## Video Processing with Threads
   This one is based on a Tutorial by Javidx9 (8bits of Image Processing)
   The program runs several types of image processing on the video supplied by the webcam (or an external cam)
   I've implemented a fresh-video constraint (bVideoBufferExists) and a provisional sleep function (to heat the cpu a bit less), however non-video-related code can run unconditionally (e.g. to read keyboard inputs, or communicate with I/Os, etc.).
