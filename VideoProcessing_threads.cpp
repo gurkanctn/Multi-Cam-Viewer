@@ -1,4 +1,4 @@
-﻿// G.Çetin, 26 April 2020:
+// G.Çetin, 26 April 2020:
 // TODO: Make a multi-threaded version of the code to reach high FPS,
 // PROBLEM: It runs 7-8 FPS with the internal camera of the laptop.
 // OK.. with the USB Camera, it goes 15fps, which is possibly sufficient.
@@ -19,6 +19,9 @@ int nFrameHeight = 240; //240
 
 bool bVideoBufferExists;
 bool bContinueCapture = true;
+float dTimeBetweenFrames = 0.0f;
+
+unsigned int nSelectedCam = 0;
 
 struct frame
 {
@@ -60,7 +63,7 @@ struct frame
 	}
 };
 
-frame input, output, prev_input, activity, threshold;
+frame input, input1, input2, output, prev_input, activity, threshold;
 
 union RGBint
 	{
@@ -69,11 +72,27 @@ union RGBint
 	};
 
 int nCameras = 0;
-SimpleCapParams capture;
+SimpleCapParams capture, capture1, capture2;
 
-void CaptureVideo1() {
+enum ALGORITHM
+{
+	THRESHOLD, MOTION, LOWPASS, CONVOLUTION,
+	SOBEL, MORPHO, MEDIAN, ADAPTIVE,
+};
 
-}
+enum MORPHOP
+{
+	DILATION,
+	EROSION,
+	EDGE
+};
+
+//frame input, output, prev_input, activity, threshold;
+
+// Algorithm Currently Running
+ALGORITHM algo = THRESHOLD;
+MORPHOP morph = DILATION;
+int nMorphCount = 1;
 
 void initCameraForCapture() {
 	// Initialise webcam to screen dimensions
@@ -82,15 +101,32 @@ void initCameraForCapture() {
 		printf("\n \n ERROR: No cameras available! Or ESCAPI.DLL not found. Check your setup.\n");
 		return;
 	}
+	
+	printf("# of Cameras: %d\n", nCameras);
+	nSelectedCam = 0;
+
 	capture.mWidth = nFrameWidth;
 	capture.mHeight = nFrameHeight;
 	capture.mTargetBuf = new int[nFrameWidth * nFrameHeight];
-	if (initCapture(0, &capture) == 0) {
-		printf("Capture Failed - device may already be in use.\n");
+	
+	capture1.mWidth = nFrameWidth;
+	capture1.mHeight = nFrameHeight;
+	capture1.mTargetBuf = new int[nFrameWidth * nFrameHeight];
+	
+	capture2.mWidth = nFrameWidth;
+	capture2.mHeight = nFrameHeight;
+	capture2.mTargetBuf = new int[nFrameWidth * nFrameHeight];
+
+	if (initCapture(0, &capture1) == 0) {
+		printf("Capture Failed - %d device may already be in use.\n", 0);
+		return;
+	}
+	if (initCapture(1, &capture2) == 0) {
+		printf("Capture Failed - &d device may already be in use.\n" , 1);
 		return;
 	}
 	printf("Camera Init Complete.\n");
-
+	capture = capture1;
 }
 
 void CaptureVideo()
@@ -99,15 +135,22 @@ void CaptureVideo()
 	/*std::cin.get();*/
 	// CAPTURING WEBCAM IMAGE
 	prev_input = input;
-	doCapture(0);
+	if (nSelectedCam == 0) {
+		capture = capture1;
+		printf("Cam - 0 selected\n");
+	}
+	if (nSelectedCam == 1) {
+		capture = capture2;
+		printf("Cam - 1 selected\n");
+	}
+	doCapture(nSelectedCam);
+
+	//auto t1 = std::chrono::high_resolution_clock::now();
 	
-	auto t1 = std::chrono::high_resolution_clock::now();
-	
-	while (isCaptureDone(0) == 0) {}
-	bVideoBufferExists = true;
-	auto t2 = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-	std::cout << duration << std::endl;
+	while (isCaptureDone(nSelectedCam) == 0) {}
+	//auto t2 = std::chrono::high_resolution_clock::now();
+	//auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+	//std::cout << duration << std::endl;
 
 	for (int y = 0; y < capture.mHeight; y++)
 		for (int x = 0; x < capture.mWidth; x++)
@@ -118,7 +161,7 @@ void CaptureVideo()
 			input.pixels[y*nFrameWidth + x] = (float)col.c[1] / 255.0f;
 		}
 	bVideoBufferExists = true;
-}
+	}
 }
 
 
@@ -161,25 +204,6 @@ public:
 			}
 	}
 
-	enum ALGORITHM
-	{
-		THRESHOLD, MOTION, LOWPASS, CONVOLUTION,
-		SOBEL, MORPHO, MEDIAN, ADAPTIVE,
-	};
-
-	enum MORPHOP
-	{
-		DILATION,
-		EROSION,
-		EDGE
-	};
-
-	//frame input, output, prev_input, activity, threshold;
-
-	// Algorithm Currently Running
-	ALGORITHM algo = THRESHOLD;
-	MORPHOP morph = DILATION;
-	int nMorphCount = 1;
 
 	float fThresholdValue = 0.5f;
 	float fLowPassRC = 0.1f;
@@ -224,31 +248,36 @@ public:
 		//Run this section Every Game Cycle (perhaps read user inputs? communicate with someone)
 		{
 
+			if (GetKey(olc::Key::K1).bReleased) algo = THRESHOLD; //bReleased or bPressed?
+			if (GetKey(olc::Key::K2).bReleased) algo = MOTION;
+			if (GetKey(olc::Key::K3).bReleased) algo = LOWPASS;
+			if (GetKey(olc::Key::K4).bReleased) algo = CONVOLUTION;
+			if (GetKey(olc::Key::K5).bReleased) algo = SOBEL;
+			if (GetKey(olc::Key::K6).bReleased) algo = MORPHO;
+			if (GetKey(olc::Key::K7).bReleased) algo = MEDIAN;
+			if (GetKey(olc::Key::K8).bReleased) algo = ADAPTIVE;
+			if (GetKey(olc::Key::TAB).bReleased) nSelectedCam= (nSelectedCam+1) % nCameras; //bReleased or bPressed?
+
 		}
+		dTimeBetweenFrames += fElapsedTime;
 
 		// run the rest of the function code only if the camera frame is fresh
 		if (!bVideoBufferExists) {
 			//std::this_thread::sleep_for(timespan); //milliseconds
+			dTimeBetweenFrames = 0.0f;
 			return true;
 		}
-
-		if (GetKey(olc::Key::K1).bReleased) algo = THRESHOLD;
-		if (GetKey(olc::Key::K2).bReleased) algo = MOTION;
-		if (GetKey(olc::Key::K3).bReleased) algo = LOWPASS;
-		if (GetKey(olc::Key::K4).bReleased) algo = CONVOLUTION;
-		if (GetKey(olc::Key::K5).bReleased) algo = SOBEL;
-		if (GetKey(olc::Key::K6).bReleased) algo = MORPHO;
-		if (GetKey(olc::Key::K7).bReleased) algo = MEDIAN;
-		if (GetKey(olc::Key::K8).bReleased) algo = ADAPTIVE;
-
+		else {
+			//dTimeBetweenFrames = 0.0f;
+		}
 
 		switch (algo)
 		{
 		case THRESHOLD:
 
 			// Respond to user input
-			if (GetKey(olc::Key::Z).bHeld) fThresholdValue -= 0.1f * fElapsedTime;
-			if (GetKey(olc::Key::X).bHeld) fThresholdValue += 0.1f * fElapsedTime;
+			if (GetKey(olc::Key::Z).bHeld) fThresholdValue -= 0.1f * dTimeBetweenFrames;
+			if (GetKey(olc::Key::X).bHeld) fThresholdValue += 0.1f * dTimeBetweenFrames;
 			if (fThresholdValue > 1.0f) fThresholdValue = 1.0f;
 			if (fThresholdValue < 0.0f) fThresholdValue = 0.0f;
 
@@ -270,8 +299,8 @@ public:
 		case LOWPASS:
 
 			// Respond to user input
-			if (GetKey(olc::Key::Z).bHeld) fLowPassRC -= 0.1f * fElapsedTime;
-			if (GetKey(olc::Key::X).bHeld) fLowPassRC += 0.1f * fElapsedTime;
+			if (GetKey(olc::Key::Z).bHeld) fLowPassRC -= 0.1f * dTimeBetweenFrames;
+			if (GetKey(olc::Key::X).bHeld) fLowPassRC += 0.1f * dTimeBetweenFrames;
 			if (fLowPassRC > 1.0f) fLowPassRC = 1.0f;
 			if (fLowPassRC < 0.0f) fLowPassRC = 0.0f;
 
@@ -425,8 +454,8 @@ public:
 
 		case ADAPTIVE:
 			// Respond to user input
-			if (GetKey(olc::Key::Z).bHeld) fAdaptiveBias -= 0.1f * fElapsedTime;
-			if (GetKey(olc::Key::X).bHeld) fAdaptiveBias += 0.1f * fElapsedTime;
+			if (GetKey(olc::Key::Z).bHeld) fAdaptiveBias -= 0.1f * dTimeBetweenFrames;
+			if (GetKey(olc::Key::X).bHeld) fAdaptiveBias += 0.1f * dTimeBetweenFrames;
 			if (fAdaptiveBias > 1.5f) fAdaptiveBias = 1.5f;
 			if (fAdaptiveBias < 0.5f) fAdaptiveBias = 0.5f;
 
@@ -463,6 +492,7 @@ public:
 		DrawString(10, 335, "7) Median Filter");
 		DrawString(10, 345, "8) Adaptive Threshold");
 
+		bVideoBufferExists = false;
 
 		switch (algo)
 		{
@@ -518,9 +548,9 @@ int main()
 
 	if (demo.Construct(670, 460, 1, 1)) {
 		initCameraForCapture();
-		std::thread doCapture(CaptureVideo);
+		std::thread thrCapture(CaptureVideo);
 		demo.Start();
-		doCapture.join();
+		thrCapture.join();
 	}
 		
 	return 0;
