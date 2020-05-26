@@ -63,7 +63,7 @@ struct frame
 	}
 };
 
-frame input, input1, input2, output, prev_input, activity, threshold;
+frame input, output, prev_input, activity, threshold;
 
 union RGBint
 	{
@@ -72,7 +72,16 @@ union RGBint
 	};
 
 int nCameras = 0;
-SimpleCapParams capture, capture1, capture2;
+SimpleCapParams capture;
+
+class cCapture
+{
+public:
+	SimpleCapParams SCP_capture;
+};
+
+//up to 4 cameras can be captured (cycled through)
+cCapture mCapture[4]; //TODO: make it dynamic at Initialization
 
 enum ALGORITHM
 {
@@ -87,8 +96,6 @@ enum MORPHOP
 	EDGE
 };
 
-//frame input, output, prev_input, activity, threshold;
-
 // Algorithm Currently Running
 ALGORITHM algo = THRESHOLD;
 MORPHOP morph = DILATION;
@@ -101,94 +108,71 @@ void initCameraForCapture() {
 		printf("\n \n ERROR: No cameras available! Or ESCAPI.DLL not found. Check your setup.\n");
 		return;
 	}
-	
-	printf("# of Cameras: %d\n", nCameras);
+
+	printf("# of Cameras: %d\n\n", nCameras);
 	nSelectedCam = 0;
 
-	capture.mWidth = nFrameWidth;
-	capture.mHeight = nFrameHeight;
-	capture.mTargetBuf = new int[nFrameWidth * nFrameHeight];
-	
-	capture1.mWidth = nFrameWidth;
-	capture1.mHeight = nFrameHeight;
-	capture1.mTargetBuf = new int[nFrameWidth * nFrameHeight];
-	
-	capture2.mWidth = nFrameWidth;
-	capture2.mHeight = nFrameHeight;
-	capture2.mTargetBuf = new int[nFrameWidth * nFrameHeight];
+	for (int i = 0; i < nCameras; i++) {
+		mCapture[i].SCP_capture.mWidth = nFrameWidth;
+		mCapture[i].SCP_capture.mHeight = nFrameHeight;
+		mCapture[i].SCP_capture.mTargetBuf = new int[nFrameWidth * nFrameHeight];
+		//capture = mCapture[i].SCP_capture;
+		
+		printf("H = %d, W= %d \n", nFrameHeight, nFrameWidth);//debug
+		printf("%d SCP_mTargetBuf = %d\n", i, &mCapture[i].SCP_capture.mTargetBuf); //debug
+		//printf("%d capture_mTargetBuf = %d\n", i, capture.mTargetBuf); //debug
 
-	if (initCapture(0, &capture1) == 0) {
-		printf("Capture Failed - %d device may already be in use.\n", 0);
-		return;
+		if (initCapture(i, &mCapture[i].SCP_capture) == 0) { //(mCapture[i].SCP_capture)
+			printf("Capture Failed - %d device may already be in use.\n", i);
+			return;
+		} else printf("Camera #%d Init Complete. \n\n", i);
+		Sleep(500);
 	}
-	if (initCapture(1, &capture2) == 0) {
-		printf("Capture Failed - &d device may already be in use.\n" , 1);
-		return;
-	}
-	printf("Camera Init Complete.\n");
-	capture = capture1;
 }
 
 void CaptureVideo()
 {
 	while (bContinueCapture) {
-	/*std::cin.get();*/
+
+	printf("C- %d. ", nSelectedCam);
+
 	// CAPTURING WEBCAM IMAGE
-	prev_input = input;
-	if (nSelectedCam == 0) {
-		capture = capture1;
-		printf("Cam - 0 selected\n");
-	}
-	if (nSelectedCam == 1) {
-		capture = capture2;
-		printf("Cam - 1 selected\n");
-	}
 	doCapture(nSelectedCam);
 
 	//auto t1 = std::chrono::high_resolution_clock::now();
-	
+
 	while (isCaptureDone(nSelectedCam) == 0) {}
 	//auto t2 = std::chrono::high_resolution_clock::now();
 	//auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 	//std::cout << duration << std::endl;
 
-	for (int y = 0; y < capture.mHeight; y++)
-		for (int x = 0; x < capture.mWidth; x++)
+	//printf("current Buf = %d\n", &mCapture[nSelectedCam].SCP_capture.mTargetBuf);
+	for (int y = 0; y < mCapture[nSelectedCam].SCP_capture.mHeight; y++)
+		for (int x = 0; x < mCapture[nSelectedCam].SCP_capture.mWidth; x++)
 		{
 			RGBint col;
-			int id = y * capture.mWidth + x;
-			col.rgb = capture.mTargetBuf[id];
+			int id = y * nFrameWidth + x;
+			//col.rgb = capture.mTargetBuf[id];
+			col.rgb = mCapture[nSelectedCam].SCP_capture.mTargetBuf[id];
 			input.pixels[y*nFrameWidth + x] = (float)col.c[1] / 255.0f;
 		}
-	bVideoBufferExists = true;
+		bVideoBufferExists = true;
 	}
 }
-
 
 class WIP_ImageProcessing : public olc::PixelGameEngine
 {
 public:
 	WIP_ImageProcessing()
 	{
-		sAppName = "WIP_ImageProcessing";
+		sAppName = "WIP_ImageProcessing_multiCamera";
 	}
-
-	//union RGBint
-	//{
-	//	int rgb;
-	//	unsigned char c[4];
-	//};
-
-	//int nCameras = 0;
-	//SimpleCapParams capture;
 
 public:
 	bool OnUserCreate() override
 	{
 		printf("\n ************************************* \n");
 		printf("Image processing trials. G.Çetin.\n");
-
-		
 		return true;
 	}
 
@@ -256,8 +240,14 @@ public:
 			if (GetKey(olc::Key::K6).bReleased) algo = MORPHO;
 			if (GetKey(olc::Key::K7).bReleased) algo = MEDIAN;
 			if (GetKey(olc::Key::K8).bReleased) algo = ADAPTIVE;
-			if (GetKey(olc::Key::TAB).bReleased) nSelectedCam= (nSelectedCam+1) % nCameras; //bReleased or bPressed?
-
+			if (GetKey(olc::Key::TAB).bReleased) {
+				nSelectedCam = (nSelectedCam + 1) % nCameras; //bReleased or bPressed?
+				printf("Cam # %d selected\n", nSelectedCam);
+			}
+			if (GetKey(olc::Key::ESCAPE).bReleased) {
+				bContinueCapture = false;  //do not continue capturing
+				return false;
+			}
 		}
 		dTimeBetweenFrames += fElapsedTime;
 
@@ -531,15 +521,11 @@ public:
 			break;
 		}
 
-		if (GetKey(olc::Key::ESCAPE).bPressed) {
-			bContinueCapture = false;  //do not continue capturing
-			return false;
-		}
+		
 		bVideoBufferExists = false;
 		return true;
 	}
 };
-
 
 int main()
 {
