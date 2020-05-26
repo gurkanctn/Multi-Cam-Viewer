@@ -4,7 +4,7 @@
   This code is based on a Tutorial by Javidx9 (8bits of Image Processing). In fact, the main functional changes are the following:
   
   1. The video capture function runs in a separate thread.
-  2. If there's more than 1 webcam, pressing the TAB key switches between cameras. (check Issue#2)
+  2. If there's more than one webcam, pressing the TAB key switches between cameras. Up to four cameras can be used (though it's practically only limited by the number of cameras available. Who needs more than 4 cameras?). (check Issue#2)
   
   The programs main function is applying several types of image processing on the video supplied by the webcam (or an external cam).
   
