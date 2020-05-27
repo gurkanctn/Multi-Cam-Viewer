@@ -134,26 +134,27 @@ void CaptureVideo()
 {
 	while (bContinueCapture) {
 
-	printf("C- %d. ", nSelectedCam);
+	printf("%d. ", nSelectedCam);
 
 	// CAPTURING WEBCAM IMAGE
-	doCapture(nSelectedCam);
+	unsigned int tempSelectedCam = nSelectedCam;
+	doCapture(tempSelectedCam);
 
 	//auto t1 = std::chrono::high_resolution_clock::now();
 
-	while (isCaptureDone(nSelectedCam) == 0) {}
+	while (isCaptureDone(tempSelectedCam) == 0) {}
 	//auto t2 = std::chrono::high_resolution_clock::now();
 	//auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 	//std::cout << duration << std::endl;
 
 	//printf("current Buf = %d\n", &mCapture[nSelectedCam].SCP_capture.mTargetBuf);
-	for (int y = 0; y < mCapture[nSelectedCam].SCP_capture.mHeight; y++)
-		for (int x = 0; x < mCapture[nSelectedCam].SCP_capture.mWidth; x++)
+	for (int y = 0; y < mCapture[tempSelectedCam].SCP_capture.mHeight; y++)
+		for (int x = 0; x < mCapture[tempSelectedCam].SCP_capture.mWidth; x++)
 		{
 			RGBint col;
 			int id = y * nFrameWidth + x;
 			//col.rgb = capture.mTargetBuf[id];
-			col.rgb = mCapture[nSelectedCam].SCP_capture.mTargetBuf[id];
+			col.rgb = mCapture[tempSelectedCam].SCP_capture.mTargetBuf[id];
 			input.pixels[y*nFrameWidth + x] = (float)col.c[1] / 255.0f;
 		}
 		bVideoBufferExists = true;
@@ -242,7 +243,7 @@ public:
 			if (GetKey(olc::Key::K8).bReleased) algo = ADAPTIVE;
 			if (GetKey(olc::Key::TAB).bReleased) {
 				nSelectedCam = (nSelectedCam + 1) % nCameras; //bReleased or bPressed?
-				printf("Cam # %d selected\n", nSelectedCam);
+				printf(">Cam # %d\n", nSelectedCam);
 			}
 			if (GetKey(olc::Key::ESCAPE).bReleased) {
 				bContinueCapture = false;  //do not continue capturing
