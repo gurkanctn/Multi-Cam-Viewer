@@ -77,6 +77,7 @@ class cCapture
 {
 public:
 	SimpleCapParams SCP_capture;
+	frame inputFrame;
 };
 
 //up to 4 cameras can be captured (cycled through)
@@ -136,27 +137,43 @@ void CaptureVideo()
 	// printf("%d. ", nSelectedCam); //for debug
 
 	// CAPTURING WEBCAM IMAGE
-	unsigned int tempSelectedCam = nSelectedCam;
-	doCapture(tempSelectedCam);
 
 	//auto t1 = std::chrono::high_resolution_clock::now();
-
-	while (isCaptureDone(tempSelectedCam) == 0) {}
 	//auto t2 = std::chrono::high_resolution_clock::now();
 	//auto duration = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 	//std::cout << duration << std::endl;
+	
+	for (int tempSelectedCam = 0; tempSelectedCam < nCameras; tempSelectedCam++) {
+		doCapture(tempSelectedCam);
 
-	//printf("current Buf = %d\n", &mCapture[nSelectedCam].SCP_capture.mTargetBuf);
-	for (int y = 0; y < mCapture[tempSelectedCam].SCP_capture.mHeight; y++)
-		for (int x = 0; x < mCapture[tempSelectedCam].SCP_capture.mWidth; x++)
-		{
-			RGBint col;
-			int id = y * nFrameWidth + x;
-			//col.rgb = capture.mTargetBuf[id];
-			col.rgb = mCapture[tempSelectedCam].SCP_capture.mTargetBuf[id];
-			input.pixels[y*nFrameWidth + x] = (float)col.c[1] / 255.0f;
+		while (isCaptureDone(tempSelectedCam) == 0) {}
+		if (tempSelectedCam == nSelectedCam) {
+			for (int y = 0; y < mCapture[tempSelectedCam].SCP_capture.mHeight; y++)
+				for (int x = 0; x < mCapture[tempSelectedCam].SCP_capture.mWidth; x++)
+				{
+					RGBint col;
+					int id = y * nFrameWidth + x;
+					//col.rgb = capture.mTargetBuf[id];
+					col.rgb = mCapture[tempSelectedCam].SCP_capture.mTargetBuf[id];
+					mCapture[tempSelectedCam].inputFrame.pixels[y*nFrameWidth + x] = (float)col.c[1] / 255.0f;
+				}
+			bVideoBufferExists = true;
 		}
-		bVideoBufferExists = true;
+		else {
+			for (int y = 0; y < mCapture[tempSelectedCam].SCP_capture.mHeight/2; y++)
+				for (int x = 0; x < mCapture[tempSelectedCam].SCP_capture.mWidth/2; x++)
+				{
+					RGBint col;
+					int id = y*4 * nFrameWidth + x*4;
+					//col.rgb = capture.mTargetBuf[id];
+					col.rgb = mCapture[tempSelectedCam].SCP_capture.mTargetBuf[id];
+					mCapture[tempSelectedCam].inputFrame.pixels[y*nFrameWidth + x] = (float)col.c[1] / 255.0f;
+				}
+			bVideoBufferExists = true;
+		}
+		}
+		
+	input = mCapture[nSelectedCam].inputFrame;
 	}
 }
 
@@ -467,8 +484,14 @@ public:
 
 		// DRAW STUFF ONLY HERE
 		Clear(olc::DARK_BLUE);
-		DrawFrame(algo == MORPHO ? threshold : input, 10, 10);
-		DrawFrame(output, 340, 10);
+		// draw previews of all cameras on the top line
+		DrawFrame(algo == MORPHO ? threshold : mCapture[0].inputFrame, 10, 10);
+		DrawFrame(algo == MORPHO ? threshold : mCapture[1].inputFrame, 90, 10);
+		DrawFrame(algo == MORPHO ? threshold : mCapture[2].inputFrame, 170, 10);
+		DrawFrame(algo == MORPHO ? threshold : mCapture[3].inputFrame, 250, 10);
+		
+		DrawFrame(input, 10, 70);
+		DrawFrame(output, nFrameWidth + 20, 70);
 
 		DrawString(150, 255, "INPUT");
 		DrawString(480, 255, "OUTPUT");
@@ -521,7 +544,6 @@ public:
 			break;
 		}
 
-		
 		bVideoBufferExists = false;
 		return true;
 	}
