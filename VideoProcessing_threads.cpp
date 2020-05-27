@@ -1,10 +1,9 @@
-// G.Çetin, 26 April 2020:
-// TODO: Make a multi-threaded version of the code to reach high FPS,
-// PROBLEM: It runs 7-8 FPS with the internal camera of the laptop.
-// OK.. with the USB Camera, it goes 15fps, which is possibly sufficient.
-// 9.5.2020 : with optimizations maxed, it runs 30fps with both cameras, in both release and Debug mode.
-// without optimizations, with the internal camera, debug mode runs at 20 FPS. 
+// G.Çetin, project started: 26 April 2020
 // Let's do some threads!
+// https://github.com/gurkanctn/Cpp-Projects
+// See bottom of file for Licence
+// Proudly uses the olcPixelGameEngine : https://community.onelonecoder.com/
+// Uses ESCAPI for webcam capturing functions.
 
 #define OLC_PGE_APPLICATION
 #include "olcPixelGameEngine.h"
@@ -134,7 +133,7 @@ void CaptureVideo()
 {
 	while (bContinueCapture) {
 
-	printf("%d. ", nSelectedCam);
+	// printf("%d. ", nSelectedCam); //for debug
 
 	// CAPTURING WEBCAM IMAGE
 	unsigned int tempSelectedCam = nSelectedCam;
@@ -243,7 +242,7 @@ public:
 			if (GetKey(olc::Key::K8).bReleased) algo = ADAPTIVE;
 			if (GetKey(olc::Key::TAB).bReleased) {
 				nSelectedCam = (nSelectedCam + 1) % nCameras; //bReleased or bPressed?
-				printf(">Cam # %d\n", nSelectedCam);
+				//printf(">Cam # %d\n", nSelectedCam);
 			}
 			if (GetKey(olc::Key::ESCAPE).bReleased) {
 				bContinueCapture = false;  //do not continue capturing
