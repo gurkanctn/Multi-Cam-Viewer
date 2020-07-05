@@ -23,3 +23,5 @@
   for threading I've found the Cherno's short video to be useful:
   
   https://www.youtube.com/watch?v=wXBcwHwIt_I
+
+If you're interested in C++ development, check out the Altay Tank Game repo: https://github.com/gurkanctn/AltayTankGame
