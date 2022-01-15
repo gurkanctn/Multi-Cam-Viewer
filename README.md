@@ -1,6 +1,5 @@
-# Cpp-Projects
+# Multi Cam Viewer
 
-## Video Processing with Threads
   This code is based on a Tutorial by Javidx9 (8bits of Image Processing). In fact, the main functional changes are the following:
   
   1. The video capture function runs in a separate thread.
