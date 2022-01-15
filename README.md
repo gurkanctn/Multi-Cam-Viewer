@@ -15,12 +15,10 @@
   2. escapi (Simple Camera interface, and its dll's)
   3. a webcam of some sort (internal or external)
   
-  check Javidx9's Tutorial for video processing:
-  
-  Relevant Video: https://youtu.be/mRM5Js3VLCk
+  check Javidx9's Tutorial for video processing: Relevant Video: https://youtu.be/mRM5Js3VLCk
    
-  for threading I've found the Cherno's short video to be useful:
-  
-  https://www.youtube.com/watch?v=wXBcwHwIt_I
+  for threading I've found the Cherno's short video to be useful:  https://www.youtube.com/watch?v=wXBcwHwIt_I
+
+#
 
 If you're interested in C++ development, check out the Altay Tank Game repo: https://github.com/gurkanctn/AltayTankGame
