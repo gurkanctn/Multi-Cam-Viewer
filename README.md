@@ -22,3 +22,8 @@
 #
 
 If you're interested in C++ development, check out the Altay Tank Game repo: https://github.com/gurkanctn/AltayTankGame
+
+STEPS TO CONFIGURE VISUAL STUDIO TO RUN and Improve MultiCamViewer:
+1. add "escapi.h" to your source
+2. add "escapi.cpp" to your source
+3. copy the correct (x86 or x64) version of "escapi.dll" into the Output folder where your executable is built (e.g. "YourProject\Debug\x64\")
